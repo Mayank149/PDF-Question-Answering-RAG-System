@@ -37,6 +37,13 @@ def embed_texts(texts):
     )
     return embeddings.astype("float32")
 
+def embed_query(query):
+    embedding = embed_model.encode(
+        query,
+        convert_to_numpy= True
+    )
+    return embedding.astype("float32")
+
 def build_faiss_index(embeddings):
     dim = embeddings.shape[1]
     index = faiss.IndexFlatL2(dim)
@@ -49,12 +56,43 @@ def build_vector_store(chunk_data):
     index = build_faiss_index(embeddings)
     return index, chunk_data
 
+def retrieve_top_k(query, index, chunk_data, k = 5):
+    query_vec = embed_query(query)
+    D,I = index.search(query_vec.reshape(1,-1), k)
+    results = []
+
+    for dis, idx in zip(D[0], I[0]):
+        results.append({
+            "text" : chunk_data[idx]["text"],
+            "source" : chunk_data[idx]["source"],
+            "distance" : float(dis)
+        })
+    return results
+
+def retrieve_with_threshold(query, index, chunk_data, k=5, max_distance=1.2):
+    results = retrieve_top_k(query, index, chunk_data, k)
+
+    filtered = [
+        r for r in results
+        if r["distance"] <= max_distance
+    ]
+
+    return filtered
+
 if __name__ == "__main__":
     text = load_pdf_text("sample.pdf")
     chunks = chunk_text(text)
     data = create_chunks_with_metadata(chunks, "sample.pdf")
     index, data = build_vector_store(data)
 
-    print("Vectors in index:", index.ntotal)
+    query = "What is AI Powered Performance Analyzer?"
+    results = retrieve_with_threshold(query, index, data, k=5)
+
+    for r in results:
+        print("Distance:", r["distance"])
+        print(r["text"])
+        print("-" * 40)
+
+    # print("Vectors in index:", index.ntotal)
     # print("Total chunks:", len(data))
     # print("\nFirst chunk:\n", data[0]["text"])
