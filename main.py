@@ -79,19 +79,69 @@ def retrieve_with_threshold(query, index, chunk_data, k=5, max_distance=1.2):
 
     return filtered
 
+def build_prompt(context_chunks, question):
+    context_text = "\n\n".join(
+        f"Source {i+1}:\n{chunk["text"]}"
+        for i, chunk in enumerate(context_chunks)
+    )
+
+    prompt = f"""
+    You are a document-based question answering system.
+    Rules:
+    - Answer using ONLY the provided context.
+    - Do NOT use outside knowledge.
+    - Do NOT guess or infer.
+    - If the answer is not explicitly present, reply exactly: "I don't know".
+
+    Context:
+    {context_text}
+
+    Question:
+    {question}
+
+    Answer:
+    """.strip()
+
+    return prompt
+
+def generate_answer(prompt):
+    model = genai.GenerativeModel("gemini-2.5-flash")
+    response = model.generate_content(prompt)
+    return response.text.strip()
+
+def answer_question(question, index, chunk_data, k = 5, max_distance = 1.2):
+    retrieved = retrieve_with_threshold(question, index, chunk_data, k, max_distance)
+
+    if not retrieved:
+        return {
+            "answer" : "I don't know",
+            "sources" : [] 
+        }
+
+    prompt = build_prompt(retrieved, question)
+    answer = generate_answer(prompt)
+
+    return {
+        "answer" : answer,
+        "sources" : retrieved
+    }
+
+
+
 if __name__ == "__main__":
     text = load_pdf_text("sample.pdf")
     chunks = chunk_text(text)
     data = create_chunks_with_metadata(chunks, "sample.pdf")
     index, data = build_vector_store(data)
 
-    query = "What is AI Powered Performance Analyzer?"
-    results = retrieve_with_threshold(query, index, data, k=5)
+    query = "who is the prime minister of india?"
 
-    for r in results:
-        print("Distance:", r["distance"])
-        print(r["text"])
-        print("-" * 40)
+    result = answer_question(query, index, data)
+
+    print("Answer:\n", result["answer"])
+    print("\nSources:")
+    for s in result["sources"]:
+        print("-", s["source"])
 
     # print("Vectors in index:", index.ntotal)
     # print("Total chunks:", len(data))
