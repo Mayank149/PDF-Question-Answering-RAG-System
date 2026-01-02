@@ -302,4 +302,9 @@ if __name__ == "__main__":
     else:
         print("No PDF loaded. Upload a PDF through the web interface.")
     
-    app.run(debug=True)
+    # Get port from environment variable or default to 5000
+    port = int(os.getenv('PORT', 5000))
+    debug_mode = os.getenv('FLASK_ENV', 'development') == 'development'
+    
+    # Bind to 0.0.0.0 to allow external connections (required for Render)
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

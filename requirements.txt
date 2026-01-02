@@ -1,0 +1,9 @@
+Flask
+Werkzeug
+langchain
+langchain-text-splitters
+sentence-transformers
+faiss-cpu
+PyPDF
+google-generativeai
+numpy
