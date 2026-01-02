@@ -14,8 +14,40 @@
                 <span>PDF Q&A</span>
             </div>
             <p class="nav-subtitle">Intelligent Document Assistant</p>
+            <button id="settingsBtn" class="settings-btn" title="Settings">⚙️</button>
         </div>
     </nav>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Settings</h2>
+                <button id="closeSettingsBtn" class="close-btn">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="setting-group">
+                    <label for="apiKeyInput" class="setting-label">Google Gemini API Key</label>
+                    <input 
+                        type="password" 
+                        id="apiKeyInput" 
+                        class="api-key-input"
+                        placeholder="Paste your API key here..."
+                        autocomplete="off">
+                    <p class="setting-hint">
+                        Get your free API key at <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com</a>
+                    </p>
+                </div>
+                <div class="api-key-status hidden" id="apiKeyStatus">
+                    <p id="apiKeyStatusText"></p>
+                </div>
+                <div class="modal-actions">
+                    <button id="testApiBtn" class="btn btn-secondary">Test Key</button>
+                    <button id="saveApiBtn" class="btn btn-primary">Save & Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="container">
         <div class="main-content">

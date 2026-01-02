@@ -17,7 +17,11 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
-genai.configure(api_key = os.getenv("API_KEY"))
+
+# Initialize with environment API key if available
+env_api_key = os.getenv("API_KEY")
+if env_api_key:
+    genai.configure(api_key=env_api_key)
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
@@ -27,6 +31,10 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
 current_pdf = None
 current_index = None
 current_data = None
+
+def get_api_key():
+    """Get API key from request header or environment"""
+    return request.headers.get('X-API-Key') or env_api_key
 
 @app.route("/")
 def home():
@@ -130,12 +138,19 @@ def build_prompt(context_chunks, question):
 
     return prompt
 
-def generate_answer(prompt):
-    model = genai.GenerativeModel("gemini-2.5-flash")
-    response = model.generate_content(prompt)
-    return response.text.strip()
+def generate_answer(prompt, api_key=None):
+    """Generate answer using Gemini API with provided or environment API key"""
+    try:
+        if api_key:
+            genai.configure(api_key=api_key)
+        
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        raise Exception(f"Error generating answer: {str(e)}")
 
-def answer_question(question, index, chunk_data, k = 5, max_distance = 1.2):
+def answer_question(question, index, chunk_data, api_key=None, k = 5, max_distance = 1.2):
     retrieved = retrieve_with_threshold(question, index, chunk_data, k, max_distance)
 
     if not retrieved:
@@ -145,7 +160,7 @@ def answer_question(question, index, chunk_data, k = 5, max_distance = 1.2):
         }
 
     prompt = build_prompt(retrieved, question)
-    answer = generate_answer(prompt)
+    answer = generate_answer(prompt, api_key)
 
     return {
         "answer" : answer,
@@ -244,9 +259,40 @@ def ask():
     if not question:
         return jsonify({"error": "No question provided"}), 400
     
-    result = answer_question(question, current_index, current_data)
-    return jsonify(result)
+    api_key = get_api_key()
+    if not api_key:
+        return jsonify({"error": "No API key provided. Please set your API key in settings."}), 401
     
+    try:
+        result = answer_question(question, current_index, current_data, api_key)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/test-api-key", methods=["POST"])
+def test_api_key():
+    """Test if the provided API key is valid"""
+    data = request.json
+    api_key = data.get("api_key") or get_api_key()
+    
+    if not api_key:
+        return jsonify({"error": "No API key provided"}), 400
+    
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel("gemini-2.5-flash")
+        # Try a simple test call
+        response = model.generate_content("Say 'ok' in one word")
+        
+        if response.text:
+            return jsonify({"success": True, "message": "API key is valid"}), 200
+        else:
+            return jsonify({"error": "API key validation failed"}), 400
+    except Exception as e:
+        return jsonify({"error": f"Invalid API key: {str(e)}"}), 401
+    
+
+
 
 if __name__ == "__main__":
     if current_index:

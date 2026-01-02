@@ -22,12 +22,23 @@ const uploadStatusText = document.getElementById("uploadStatusText");
 const statusContainer = document.getElementById("statusContainer");
 const statusText = document.getElementById("statusText");
 
+// Settings elements
+const settingsBtn = document.getElementById("settingsBtn");
+const settingsModal = document.getElementById("settingsModal");
+const closeSettingsBtn = document.getElementById("closeSettingsBtn");
+const apiKeyInput = document.getElementById("apiKeyInput");
+const testApiBtn = document.getElementById("testApiBtn");
+const saveApiBtn = document.getElementById("saveApiBtn");
+const apiKeyStatus = document.getElementById("apiKeyStatus");
+const apiKeyStatusText = document.getElementById("apiKeyStatusText");
+
 // ============================================
 // STATE MANAGEMENT
 // ============================================
 
 let isLoading = false;
 let isPdfLoaded = false;
+let apiKey = localStorage.getItem("gemini_api_key") || "";
 
 // ============================================
 // EVENT LISTENERS
@@ -35,6 +46,17 @@ let isPdfLoaded = false;
 
 askBtn.addEventListener("click", handleAskQuestion);
 clearBtn.addEventListener("click", handleClear);
+
+// Settings modal events
+settingsBtn.addEventListener("click", openSettings);
+closeSettingsBtn.addEventListener("click", closeSettings);
+testApiBtn.addEventListener("click", testApiKey);
+saveApiBtn.addEventListener("click", saveApiKey);
+
+// Close modal when clicking outside
+settingsModal.addEventListener("click", (e) => {
+    if (e.target === settingsModal) closeSettings();
+});
 
 // PDF upload events
 pdfInput.addEventListener("change", handleFileSelect);
@@ -54,6 +76,83 @@ questionInput.addEventListener("keydown", (e) => {
 questionInput.addEventListener("input", () => {
     askBtn.disabled = !questionInput.value.trim() || isLoading || !isPdfLoaded;
 });
+
+// ============================================
+// SETTINGS FUNCTIONS
+// ============================================
+
+function openSettings() {
+    settingsModal.classList.remove("hidden");
+    apiKeyInput.value = apiKey;
+    apiKeyInput.focus();
+    hideApiKeyStatus();
+}
+
+function closeSettings() {
+    settingsModal.classList.add("hidden");
+    hideApiKeyStatus();
+}
+
+async function testApiKey() {
+    const key = apiKeyInput.value.trim();
+    
+    if (!key) {
+        showApiKeyStatus("Please enter an API key", "error");
+        return;
+    }
+    
+    showApiKeyStatus("Testing API key...", "loading");
+    testApiBtn.disabled = true;
+    
+    try {
+        const response = await fetch("/test-api-key", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ api_key: key })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            showApiKeyStatus("✓ API key is valid!", "success");
+        } else {
+            showApiKeyStatus(`✗ ${data.error || "Invalid API key"}`, "error");
+        }
+    } catch (error) {
+        showApiKeyStatus(`✗ Error testing API key: ${error.message}`, "error");
+    } finally {
+        testApiBtn.disabled = false;
+    }
+}
+
+function saveApiKey() {
+    const key = apiKeyInput.value.trim();
+    
+    if (!key) {
+        showApiKeyStatus("Please enter an API key", "error");
+        return;
+    }
+    
+    apiKey = key;
+    localStorage.setItem("gemini_api_key", key);
+    showApiKeyStatus("✓ API key saved successfully", "success");
+    
+    setTimeout(() => {
+        closeSettings();
+    }, 1500);
+}
+
+function showApiKeyStatus(message, type) {
+    apiKeyStatusText.textContent = message;
+    apiKeyStatus.classList.remove("hidden", "success", "error", "loading");
+    apiKeyStatus.classList.add(type);
+}
+
+function hideApiKeyStatus() {
+    apiKeyStatus.classList.add("hidden");
+}
 
 // ============================================
 // PDF UPLOAD FUNCTIONS
@@ -111,6 +210,9 @@ async function uploadPdf(file) {
     try {
         const response = await fetch('/upload', {
             method: 'POST',
+            headers: {
+                "X-API-Key": apiKey
+            },
             body: formData
         });
         
@@ -187,7 +289,8 @@ async function handleAskQuestion() {
         const response = await fetch("/ask", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "X-API-Key": apiKey
             },
             body: JSON.stringify({ question })
         });
