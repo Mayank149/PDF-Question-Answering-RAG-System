@@ -52,9 +52,9 @@ body {
 .navbar {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
     color: white;
-    padding: 1.5rem 0;
+    padding: 1rem 0;
     box-shadow: var(--shadow-md);
-    position: sticky;
+    /* position: sticky; */
     top: 0;
     z-index: 100;
 }
