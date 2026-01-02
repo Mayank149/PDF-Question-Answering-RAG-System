@@ -14,11 +14,20 @@ const errorContainer = document.getElementById("errorContainer");
 const errorText = document.getElementById("errorText");
 const sourceCount = document.getElementById("sourceCount");
 
+// PDF Upload elements
+const pdfInput = document.getElementById("pdfInput");
+const uploadBox = document.querySelector(".upload-box");
+const uploadStatus = document.getElementById("uploadStatus");
+const uploadStatusText = document.getElementById("uploadStatusText");
+const statusContainer = document.getElementById("statusContainer");
+const statusText = document.getElementById("statusText");
+
 // ============================================
 // STATE MANAGEMENT
 // ============================================
 
 let isLoading = false;
+let isPdfLoaded = false;
 
 // ============================================
 // EVENT LISTENERS
@@ -26,6 +35,12 @@ let isLoading = false;
 
 askBtn.addEventListener("click", handleAskQuestion);
 clearBtn.addEventListener("click", handleClear);
+
+// PDF upload events
+pdfInput.addEventListener("change", handleFileSelect);
+uploadBox.addEventListener("dragover", handleDragOver);
+uploadBox.addEventListener("dragleave", handleDragLeave);
+uploadBox.addEventListener("drop", handleDrop);
 
 // Allow Enter key to submit (Shift+Enter for new line)
 questionInput.addEventListener("keydown", (e) => {
@@ -37,8 +52,114 @@ questionInput.addEventListener("keydown", (e) => {
 
 // Enable/disable button based on input
 questionInput.addEventListener("input", () => {
-    askBtn.disabled = !questionInput.value.trim() || isLoading;
+    askBtn.disabled = !questionInput.value.trim() || isLoading || !isPdfLoaded;
 });
+
+// ============================================
+// PDF UPLOAD FUNCTIONS
+// ============================================
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    uploadBox.classList.add("dragover");
+}
+
+function handleDragLeave(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    uploadBox.classList.remove("dragover");
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    uploadBox.classList.remove("dragover");
+    
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        pdfInput.files = files;
+        handleFileSelect();
+    }
+}
+
+async function handleFileSelect() {
+    const file = pdfInput.files[0];
+    
+    if (!file) return;
+    
+    if (!file.name.endsWith('.pdf')) {
+        showUploadError("Please select a valid PDF file");
+        return;
+    }
+    
+    if (file.size > 50 * 1024 * 1024) {
+        showUploadError("File size exceeds 50MB limit");
+        return;
+    }
+    
+    await uploadPdf(file);
+}
+
+async function uploadPdf(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    showUploadLoading();
+    hideAllResults();
+    
+    try {
+        const response = await fetch('/upload', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            showUploadError(data.error || "Failed to upload PDF");
+            return;
+        }
+        
+        // Success
+        showUploadSuccess(data);
+        updatePdfStatus(data.filename, data.chunks, data.vectors);
+        isPdfLoaded = true;
+        questionInput.disabled = false;
+        askBtn.disabled = !questionInput.value.trim();
+        
+    } catch (error) {
+        showUploadError(`Error uploading PDF: ${error.message}`);
+    }
+}
+
+function showUploadLoading() {
+    uploadStatus.innerHTML = '<p id="uploadStatusText">Uploading and processing PDF...</p>';
+    uploadStatus.classList.remove("hidden", "success", "error");
+    uploadStatus.classList.add("loading");
+}
+
+function showUploadSuccess(data) {
+    uploadStatus.innerHTML = `
+        <p id="uploadStatusText">
+            ✓ ${data.filename} loaded successfully
+            <br><small>${data.chunks} chunks • ${data.vectors} vectors</small>
+        </p>
+    `;
+    uploadStatus.classList.remove("hidden", "error", "loading");
+    uploadStatus.classList.add("success");
+}
+
+function showUploadError(message) {
+    uploadStatus.innerHTML = `<p id="uploadStatusText">✗ ${message}</p>`;
+    uploadStatus.classList.remove("hidden", "success", "loading");
+    uploadStatus.classList.add("error");
+}
+
+function updatePdfStatus(filename, chunks, vectors) {
+    statusText.textContent = `📄 ${filename} • ${chunks} chunks • ${vectors} vectors`;
+    statusContainer.classList.remove("hidden");
+}
 
 // ============================================
 // MAIN FUNCTIONS
@@ -185,11 +306,33 @@ function sanitizeHtml(text) {
     return div.innerHTML;
 }
 
+function showInitialMessage() {
+    uploadStatus.innerHTML = '<p id="uploadStatusText">👋 Please upload a PDF to get started</p>';
+    uploadStatus.classList.remove("hidden");
+}
+
 // ============================================
 // INITIALIZATION
 // ============================================
 
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
     askBtn.disabled = true;
-    questionInput.focus();
+    questionInput.disabled = true;
+    
+    // Check if a PDF is already loaded
+    try {
+        const response = await fetch('/status');
+        const data = await response.json();
+        
+        if (data.loaded) {
+            updatePdfStatus(data.filename, data.chunks, data.vectors);
+            isPdfLoaded = true;
+            questionInput.disabled = false;
+            askBtn.disabled = true;
+        } else {
+            showInitialMessage();
+        }
+    } catch (error) {
+        console.error('Error checking PDF status:', error);
+    }
 });

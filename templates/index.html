@@ -25,6 +25,37 @@
                 <p class="subtitle">Get instant answers powered by AI</p>
             </div>
 
+            <!-- PDF Upload Section -->
+            <div class="card upload-card">
+                <div class="upload-section">
+                    <label for="pdfInput" class="input-label">📤 Upload Your PDF</label>
+                    <div class="upload-container">
+                        <input 
+                            type="file" 
+                            id="pdfInput" 
+                            class="file-input"
+                            accept=".pdf"
+                            hidden>
+                        <label for="pdfInput" class="upload-box">
+                            <div class="upload-content">
+                                <span class="upload-icon">📄</span>
+                                <p class="upload-text">Drag and drop your PDF here or click to browse</p>
+                                <p class="upload-hint">Max file size: 50MB</p>
+                            </div>
+                        </label>
+                    </div>
+                    <div id="uploadStatus" class="upload-status hidden">
+                        <p id="uploadStatusText"></p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PDF Status -->
+            <div id="statusContainer" class="status-badge hidden">
+                <span class="status-dot"></span>
+                <span id="statusText"></span>
+            </div>
+
             <!-- Question Input Section -->
             <div class="card input-card">
                 <div class="input-section">
@@ -32,11 +63,12 @@
                     <textarea 
                         id="questionInput" 
                         class="question-input"
-                        placeholder="Example: What is the main topic of this document? Who are the key figures mentioned?"
-                        rows="3"></textarea>
+                        placeholder="Ask a question about your document"
+                        rows="3"
+                        disabled></textarea>
                     
                     <div class="button-group">
-                        <button id="askBtn" class="btn btn-primary">
+                        <button id="askBtn" class="btn btn-primary" disabled>
                             <span class="btn-icon">✨</span>
                             <span class="btn-text">Get Answer</span>
                         </button>
