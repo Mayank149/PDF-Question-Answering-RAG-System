@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Q&A - Intelligent Document Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <span class="logo-icon">📄</span>
+                <span>PDF Q&A</span>
+            </div>
+            <p class="nav-subtitle">Intelligent Document Assistant</p>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="main-content">
+            <!-- Header -->
+            <div class="header-section">
+                <h1>Ask Anything About Your Document</h1>
+                <p class="subtitle">Get instant answers powered by AI</p>
+            </div>
+
+            <!-- Question Input Section -->
+            <div class="card input-card">
+                <div class="input-section">
+                    <label for="questionInput" class="input-label">Your Question</label>
+                    <textarea 
+                        id="questionInput" 
+                        class="question-input"
+                        placeholder="Example: What is the main topic of this document? Who are the key figures mentioned?"
+                        rows="3"></textarea>
+                    
+                    <div class="button-group">
+                        <button id="askBtn" class="btn btn-primary">
+                            <span class="btn-icon">✨</span>
+                            <span class="btn-text">Get Answer</span>
+                        </button>
+                        <button id="clearBtn" class="btn btn-secondary">
+                            <span class="btn-icon">🗑️</span>
+                            <span class="btn-text">Clear</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loading" class="loading-container hidden">
+                <div class="spinner"></div>
+                <p class="loading-text">Analyzing your question...</p>
+            </div>
+
+            <!-- Answer Section -->
+            <div id="answerContainer" class="card answer-section hidden">
+                <div class="section-header">
+                    <h2>💡 Answer</h2>
+                </div>
+                <p id="answerText" class="answer-text"></p>
+            </div>
+
+            <!-- Sources Section -->
+            <div id="sourcesContainer" class="card sources-section hidden">
+                <div class="section-header">
+                    <h2>📚 Sources</h2>
+                    <span id="sourceCount" class="source-count"></span>
+                </div>
+                <div id="sources" class="sources-grid"></div>
+            </div>
+
+            <!-- Error Message -->
+            <div id="errorContainer" class="card error-section hidden">
+                <div class="error-header">
+                    <span class="error-icon">⚠️</span>
+                    <h3>Something went wrong</h3>
+                </div>
+                <p id="errorText"></p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <p>Powered by RAG + Google Gemini AI</p>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

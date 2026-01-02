@@ -5,12 +5,16 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 import faiss
 import os
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 genai.configure(api_key = os.getenv("API_KEY"))
 
 app = Flask(__name__)
+
+@app.route("/")
+def home():
+    return render_template("index.html")
 
 def chunk_text(text):
     splitter = RecursiveCharacterTextSplitter(
@@ -136,7 +140,7 @@ index, data = build_vector_store(data)
 
 @app.route("/ask", methods = ["POST"])
 def ask():
-    question = request.json("question")
+    question = request.json.get("question")
     result = answer_question(question, index, data)
     return jsonify(result)
     
