@@ -5,9 +5,12 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 import faiss
 import os
+from flask import Flask, request, jsonify
 
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
 genai.configure(api_key = os.getenv("API_KEY"))
+
+app = Flask(__name__)
 
 def chunk_text(text):
     splitter = RecursiveCharacterTextSplitter(
@@ -126,22 +129,36 @@ def answer_question(question, index, chunk_data, k = 5, max_distance = 1.2):
         "sources" : retrieved
     }
 
+text = load_pdf_text("sample.pdf")
+chunks = chunk_text(text)
+data = create_chunks_with_metadata(chunks, "sample.pdf")
+index, data = build_vector_store(data)
 
+@app.route("/ask", methods = ["POST"])
+def ask():
+    question = request.json("question")
+    result = answer_question(question, index, data)
+    return jsonify(result)
+    
 
 if __name__ == "__main__":
-    text = load_pdf_text("sample.pdf")
-    chunks = chunk_text(text)
-    data = create_chunks_with_metadata(chunks, "sample.pdf")
-    index, data = build_vector_store(data)
 
-    query = "who is the prime minister of india?"
+    print(index.ntotal)
+    app.run(debug=True)
 
-    result = answer_question(query, index, data)
+    # text = load_pdf_text("sample.pdf")
+    # chunks = chunk_text(text)
+    # data = create_chunks_with_metadata(chunks, "sample.pdf")
+    # index, data = build_vector_store(data)
 
-    print("Answer:\n", result["answer"])
-    print("\nSources:")
-    for s in result["sources"]:
-        print("-", s["source"])
+    # query = "who is the prime minister of india?"
+
+    # result = answer_question(query, index, data)
+
+    # print("Answer:\n", result["answer"])
+    # print("\nSources:")
+    # for s in result["sources"]:
+    #     print("-", s["source"])
 
     # print("Vectors in index:", index.ntotal)
     # print("Total chunks:", len(data))
